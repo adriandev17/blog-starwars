@@ -1,37 +1,93 @@
-// Import necessary hooks and components from react-router-dom and other libraries.
-import { Link, useParams } from "react-router-dom";  // To use link for navigation and useParams to get URL parameters
-import PropTypes from "prop-types";  // To define prop types for this component
-import rigoImageUrl from "../assets/img/rigo-baby.jpg"  // Import an image asset
-import useGlobalReducer from "../hooks/useGlobalReducer";  // Import a custom hook for accessing the global state
+import React, { useState, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+import useGlobalReducer from "../hooks/useGlobalReducer.jsx";
 
-// Define and export the Single component which displays individual item details.
-export const Single = props => {
-  // Access the global state using the custom hook.
-  const { store } = useGlobalReducer()
+export const Single = () => {
+  const { store } = useGlobalReducer();
+  const params = useParams();
+  const [characterDetails, setCharacterDetails] = useState(null);
 
-  // Retrieve the 'theId' URL parameter using useParams hook.
-  const { theId } = useParams()
-  const singleTodo = store.todos.find(todo => todo.id === parseInt(theId));
+  // 1. Buscamos el personaje en el store para tener el nombre YA MISMO
+  const storeCharacter = store.people.find(item => item.uid === params.theId);
+
+  useEffect(() => {
+    // 2. Pedimos los detalles específicos a la API
+    fetch(`https://www.swapi.tech/api/people/${params.theId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Error API");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.result && data.result.properties) {
+          setCharacterDetails(data.result.properties);
+        }
+      })
+      .catch((err) => console.error("Error cargando personaje:", err));
+  }, [params.theId]);
+
+  // Si tenemos detalles, úsalos; si no, usa lo básico del store
+  const character = characterDetails || storeCharacter;
 
   return (
-    <div className="container text-center">
-      {/* Display the title of the todo element dynamically retrieved from the store using theId. */}
-      <h1 className="display-4">Todo: {singleTodo?.title}</h1>
-      <hr className="my-4" />  {/* A horizontal rule for visual separation. */}
+    <div className="container mt-5">
+      <div className="row justify-content-center align-items-center">
+        
+        {/* IMAGEN */}
+        <div className="col-md-6 text-center">
+          <img 
+            src={`https://starwars-visualguide.com/assets/img/characters/${params.theId}.jpg`}
+            className="img-fluid rounded border border-secondary" 
+            alt={character?.name || "Character"}
+            onError={(e) => e.target.src = "https://starwars-visualguide.com/assets/img/placeholder.jpg"}
+          />
+        </div>
 
-      {/* A Link component acts as an anchor tag but is used for client-side routing to prevent page reloads. */}
-      <Link to="/">
-        <span className="btn btn-primary btn-lg" href="#" role="button">
-          Back home
-        </span>
-      </Link>
+        {/* TEXTO */}
+        <div className="col-md-6 text-center text-md-start">
+          <h1 className="display-4">{character?.name || "Loading..."}</h1>
+          <p className="lead">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. A person within the Star Wars universe.
+          </p>
+        </div>
+      </div>
+
+      <hr className="my-4 border-danger border-2" />
+
+      {/* DATOS TÉCNICOS (Color Rojo) */}
+      <div className="row text-danger text-center">
+        <div className="col-md-2">
+          <strong>Name</strong>
+          <p>{character?.name}</p>
+        </div>
+        <div className="col-md-2">
+          <strong>Birth Year</strong>
+          <p>{characterDetails ? characterDetails.birth_year : "Loading..."}</p>
+        </div>
+        <div className="col-md-2">
+          <strong>Gender</strong>
+          <p>{characterDetails ? characterDetails.gender : "Loading..."}</p>
+        </div>
+        <div className="col-md-2">
+          <strong>Height</strong>
+          <p>{characterDetails ? characterDetails.height : "Loading..."}</p>
+        </div>
+        <div className="col-md-2">
+          <strong>Skin Color</strong>
+          <p>{characterDetails ? characterDetails.skin_color : "Loading..."}</p>
+        </div>
+        <div className="col-md-2">
+          <strong>Eye Color</strong>
+          <p>{characterDetails ? characterDetails.eye_color : "Loading..."}</p>
+        </div>
+      </div>
+
+      <div className="text-center mt-4">
+        <Link to="/">
+          <span className="btn btn-primary btn-lg" role="button">
+            Back home
+          </span>
+        </Link>
+      </div>
     </div>
   );
-};
-
-// Use PropTypes to validate the props passed to this component, ensuring reliable behavior.
-Single.propTypes = {
-  // Although 'match' prop is defined here, it is not used in the component.
-  // Consider removing or using it as needed.
-  match: PropTypes.object
 };
